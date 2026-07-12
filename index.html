@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=240, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>CloudNote</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="theme-light">
+    <header class="topbar">
+      <div class="brand">CloudNote</div>
+      <div class="top-actions" aria-hidden="true"></div>
+    </header>
+
+    <main class="main">
+      <!-- Home view -->
+      <section id="view-home" class="view">
+        <div id="empty-state" class="empty hidden">
+          <div class="empty-text">No notes yet</div>
+          <button id="create-first" class="cta">Create Note</button>
+        </div>
+
+        <ul id="notes" class="notes" role="list" aria-live="polite"></ul>
+      </section>
+
+      <!-- Help view -->
+      <section id="view-help" class="view hidden">
+        <div class="card">
+          <h3>Help</h3>
+          <p>CloudNote is a simple notes app. Tap the plus button to create a note. Notes are stored locally on your device.</p>
+          <p>Backup and restore are available in Settings.</p>
+          <div class="bottom-links">
+            <button id="help-about" class="link">About</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings view -->
+      <section id="view-settings" class="view hidden">
+        <div class="card">
+          <h3>Settings</h3>
+
+          <div class="setting">
+            <label><input id="theme-toggle" type="checkbox" /> Dark theme</label>
+          </div>
+
+          <div class="setting">
+            <label><input id="compact-toggle" type="checkbox" /> Compact mode</label>
+          </div>
+
+          <div id="backup-controls" class="setting hidden">
+            <button id="export-btn" class="btn">Export backup</button>
+            <input id="import-file" type="file" accept="application/json" />
+            <button id="import-btn" class="btn">Import backup</button>
+          </div>
+
+          <div class="setting">
+            <button id="reset-btn" class="btn secondary">Delete all notes</button>
+          </div>
+
+          <div class="bottom-links">
+            <button id="settings-help" class="link">Help</button>
+            <button id="settings-about" class="link">About</button>
+          </div>
+
+          <div class="about-block">
+            <div><strong>App</strong>: CloudNote</div>
+            <div><strong>Version</strong>: 1.0.0</div>
+            <div><strong>Developer</strong>: Tasmon Islam</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- About modal (simple) -->
+      <div id="about-modal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-card">
+          <h4>About CloudNote</h4>
+          <p>CloudNote — simple notes for small screens.</p>
+          <p>Version 1.0.0</p>
+          <p>Developer: Tasmon Islam</p>
+          <div class="modal-actions">
+            <button id="about-close" class="btn">Close</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Floating action button -->
+    <button id="fab" class="fab" aria-label="New note">＋</button>
+
+    <!-- Editor sheet -->
+    <div id="editor" class="sheet hidden" aria-hidden="true">
+      <div class="sheet-handle"></div>
+      <div class="sheet-body">
+        <input id="note-title" placeholder="Title" maxlength="80" />
+        <textarea id="note-body" placeholder="Write your note..." rows="6"></textarea>
+        <div class="sheet-actions">
+          <button id="save-btn" class="btn primary">Save</button>
+          <button id="cancel-btn" class="btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom navigation -->
+    <nav class="bottom-nav" role="navigation" aria-label="Main">
+      <button class="nav-btn active" data-view="home">Home</button>
+      <button class="nav-btn" data-view="help">Help</button>
+      <button class="nav-btn" data-view="settings">Settings</button>
+    </nav>
+
+    <footer class="footer">CloudNote • Offline</footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
