@@ -10,31 +10,28 @@
   <div id="app">
     <header class="topbar">
       <div class="brand">CloudNote</div>
-      <div class="header-actions">
-        <button id="new-note-btn" class="btn small" aria-label="New note">New</button>
-      </div>
+      <button id="new-note-btn" class="btn small">New</button>
     </header>
 
     <main class="main">
       <!-- Home -->
       <section id="view-home" class="view">
-        <div id="empty-state" class="empty hidden" aria-hidden="true">
-          <button id="create-first" class="cta" aria-label="Create new note">Create New</button>
+        <div id="empty-state" class="empty hidden">
+          <button id="create-first" class="cta">Create New</button>
         </div>
-
-        <ul id="notes" class="notes" role="list" aria-live="polite"></ul>
+        <ul id="notes" class="notes"></ul>
       </section>
 
       <!-- Help -->
       <section id="view-help" class="view hidden">
         <div class="card">
           <h3>Help</h3>
-          <p>CloudNote is a minimal notes app for small screens.</p>
+          <p>CloudNote is a minimal notes app:</p>
           <ul>
-            <li>Tap <strong>New</strong> or <strong>Create New</strong> to add a note.</li>
-            <li>Open a note to edit and tap <strong>Save</strong>.</li>
+            <li>Tap New or Create New to add a note.</li>
+            <li>Open a note to edit and Save.</li>
             <li>Delete removes a note permanently.</li>
-            <li>Backup & Restore are available in <strong>Settings</strong>.</li>
+            <li>Backup & Restore are in Settings.</li>
           </ul>
         </div>
       </section>
@@ -45,16 +42,14 @@
           <h3>Settings</h3>
 
           <div class="setting-row">
-            <label class="label-inline"><input id="compact-toggle" type="checkbox" /> Compact mode</label>
+            <label><input id="compact-toggle" type="checkbox" /> Compact mode</label>
           </div>
 
           <div class="setting-row" id="backup-controls">
             <div class="label">Backup & Restore</div>
-            <div class="backup-row">
-              <button id="export-btn" class="btn small">Export</button>
-              <input id="import-file" type="file" accept="application/json" />
-              <button id="import-btn" class="btn small">Import</button>
-            </div>
+            <button id="export-btn" class="btn small">Export</button>
+            <input id="import-file" type="file" accept="application/json" />
+            <button id="import-btn" class="btn small">Import</button>
             <div class="hint">Import supports Merge or Replace.</div>
           </div>
 
@@ -71,12 +66,12 @@
       </section>
     </main>
 
-    <!-- Editor sheet -->
-    <div id="editor" class="sheet hidden" aria-hidden="true">
-      <div class="sheet-handle" aria-hidden="true"></div>
+    <!-- Editor -->
+    <div id="editor" class="sheet hidden">
+      <div class="sheet-handle"></div>
       <div class="sheet-body">
-        <input id="note-title" placeholder="Title" maxlength="80" aria-label="Note title" />
-        <textarea id="note-body" placeholder="Write your note..." rows="6" aria-label="Note body"></textarea>
+        <input id="note-title" placeholder="Title" maxlength="80" />
+        <textarea id="note-body" placeholder="Write your note..." rows="6"></textarea>
         <div class="sheet-actions">
           <button id="save-btn" class="btn primary small">Save</button>
           <button id="cancel-btn" class="btn small">Cancel</button>
@@ -85,10 +80,10 @@
     </div>
 
     <!-- Bottom navigation -->
-    <nav class="bottom-nav" role="navigation" aria-label="Main">
-      <button class="nav-btn active" data-view="home" aria-label="Home">Home</button>
-      <button class="nav-btn" data-view="help" aria-label="Help">Help</button>
-      <button class="nav-btn" data-view="settings" aria-label="Settings">Settings</button>
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-view="home">Home</button>
+      <button class="nav-btn" data-view="help">Help</button>
+      <button class="nav-btn" data-view="settings">Settings</button>
     </nav>
   </div>
 

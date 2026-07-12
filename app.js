@@ -1,4 +1,4 @@
-// CloudNote v1.0.0 — final fixed version
+// CloudNote v1.0.0 — complete working version
 const STORAGE_KEY = 'cloudnote_v1';
 const DRAFT_KEY = 'cloudnote_draft_v1';
 const PREFS_KEY = 'cloudnote_prefs_v1';
@@ -22,17 +22,15 @@ function loadAll(){
 function saveNotes(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
 function savePrefs(){ localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); }
 
-// Render
+// Render notes
 function render(){
   const list = $('notes');
   list.innerHTML = '';
 
   if(notes.length === 0){
     $('empty-state').classList.remove('hidden');
-    $('empty-state').setAttribute('aria-hidden', 'false');
   } else {
     $('empty-state').classList.add('hidden');
-    $('empty-state').setAttribute('aria-hidden', 'true');
   }
 
   const out = notes.slice().sort((a,b)=>b.updated - a.updated);
@@ -54,7 +52,7 @@ function render(){
     openBtn.addEventListener('click', ()=> openEditorFor(n.id));
 
     const delBtn = document.createElement('button');
-    delBtn.className = 'btn small';
+    delBtn.className = 'btn small secondary';
     delBtn.textContent = 'Delete';
     delBtn.addEventListener('click', ()=> {
       if(confirm('Delete note?')) deleteNote(n.id);
@@ -70,7 +68,7 @@ function render(){
   });
 }
 
-// Editor
+// Editor functions
 function openEditorFor(id){
   const n = notes.find(x=>x.id===id);
   if(!n) return;
@@ -117,12 +115,9 @@ function showEditor(show){
   const s = $('editor');
   if(show){
     s.classList.remove('hidden');
-    s.setAttribute('aria-hidden','false');
-    // focus title for quick entry
-    setTimeout(()=> $('note-title').focus(), 120);
+    setTimeout(()=> $('note-title').focus(), 100);
   } else {
     s.classList.add('hidden');
-    s.setAttribute('aria-hidden','true');
   }
 }
 
@@ -241,7 +236,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     render();
   });
 
-  // Backup / restore in settings
+  // Backup / restore
   $('export-btn').addEventListener('click', exportBackup);
   $('import-btn').addEventListener('click', ()=> {
     const f = $('import-file').files[0];
@@ -254,8 +249,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   $('reset-btn').addEventListener('click', ()=> {
     if(confirm('Delete all notes?')){ notes = []; saveNotes(); render(); }
   });
-
-  // Help -> nothing else needed (nav handles it)
 
   // Default view
   showView('home');
