@@ -1,38 +1,40 @@
-// CloudNote minimal modern app (240x320)
-// Features: create/edit/delete notes, backup/restore hidden in Settings, Help, About, light/dark theme, compact mode.
-
-const STORAGE_KEY = 'cloudnote_minimal_v1';
-const PREFS_KEY = 'cloudnote_minimal_prefs_v1';
-const DRAFT_KEY = 'cloudnote_minimal_draft_v1';
+// CloudNote v1.0.0 — final fixed version
+const STORAGE_KEY = 'cloudnote_v1';
+const DRAFT_KEY = 'cloudnote_draft_v1';
+const PREFS_KEY = 'cloudnote_prefs_v1';
 
 let notes = [];
-let prefs = { theme: 'light', compact: false, showBackup: false };
+let prefs = { compact: false };
 let editingId = null;
 let autosaveTimer = null;
 
 const $ = id => document.getElementById(id);
 
+// Utilities
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+// Storage
 function loadAll(){
   try { notes = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e){ notes = []; }
   try { prefs = JSON.parse(localStorage.getItem(PREFS_KEY)) || prefs; } catch(e){}
-  applyTheme();
 }
-
 function saveNotes(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
 function savePrefs(){ localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); }
 
+// Render
 function render(){
   const list = $('notes');
   list.innerHTML = '';
+
   if(notes.length === 0){
     $('empty-state').classList.remove('hidden');
+    $('empty-state').setAttribute('aria-hidden', 'false');
   } else {
     $('empty-state').classList.add('hidden');
+    $('empty-state').setAttribute('aria-hidden', 'true');
   }
 
-  // newest first
   const out = notes.slice().sort((a,b)=>b.updated - a.updated);
   out.forEach(n => {
     const li = document.createElement('li');
@@ -45,12 +47,19 @@ function render(){
     body.textContent = n.body || '';
     const actions = document.createElement('div');
     actions.className = 'note-actions';
+
     const openBtn = document.createElement('button');
-    openBtn.className = 'btn'; openBtn.textContent = 'Open';
-    openBtn.onclick = () => openEditorFor(n.id);
+    openBtn.className = 'btn small';
+    openBtn.textContent = 'Open';
+    openBtn.addEventListener('click', ()=> openEditorFor(n.id));
+
     const delBtn = document.createElement('button');
-    delBtn.className = 'btn secondary'; delBtn.textContent = 'Delete';
-    delBtn.onclick = () => { if(confirm('Delete note?')) deleteNote(n.id); };
+    delBtn.className = 'btn small';
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', ()=> {
+      if(confirm('Delete note?')) deleteNote(n.id);
+    });
+
     actions.appendChild(openBtn);
     actions.appendChild(delBtn);
 
@@ -59,14 +68,9 @@ function render(){
     li.appendChild(actions);
     list.appendChild(li);
   });
-
-  // show/hide backup controls in settings
-  const backupControls = $('backup-controls');
-  if(prefs.showBackup) backupControls.classList.remove('hidden'); else backupControls.classList.add('hidden');
 }
 
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
+// Editor
 function openEditorFor(id){
   const n = notes.find(x=>x.id===id);
   if(!n) return;
@@ -92,7 +96,9 @@ function saveNote(){
   if(editingId){
     const n = notes.find(x=>x.id===editingId);
     if(!n) return;
-    n.title = title; n.body = body; n.updated = now;
+    n.title = title;
+    n.body = body;
+    n.updated = now;
   } else {
     notes.push({ id: uid(), title, body, created: now, updated: now });
   }
@@ -109,14 +115,22 @@ function deleteNote(id){
 
 function showEditor(show){
   const s = $('editor');
-  if(show) s.classList.remove('hidden'); else s.classList.add('hidden');
+  if(show){
+    s.classList.remove('hidden');
+    s.setAttribute('aria-hidden','false');
+    // focus title for quick entry
+    setTimeout(()=> $('note-title').focus(), 120);
+  } else {
+    s.classList.add('hidden');
+    s.setAttribute('aria-hidden','true');
+  }
 }
 
+// Draft autosave
 function autosaveDraft(){
   const draft = { title: $('note-title').value, body: $('note-body').value, editingId };
   localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
 }
-
 function loadDraft(){
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
@@ -130,7 +144,7 @@ function loadDraft(){
   } catch(e){}
 }
 
-// Backup export
+// Backup / Restore
 function exportBackup(){
   const payload = { exportedAt: Date.now(), notes };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -144,7 +158,6 @@ function exportBackup(){
   URL.revokeObjectURL(url);
 }
 
-// Import (merge or replace)
 function importBackupFile(file){
   if(!file) return alert('No file selected.');
   const reader = new FileReader();
@@ -188,38 +201,12 @@ function normalizeNote(n){
   };
 }
 
-// Theme & prefs
-function applyTheme(){
-  const root = document.getElementById('app');
-  if(prefs.theme === 'dark') root.classList.remove('theme-light'), root.classList.add('theme-dark');
-  else root.classList.remove('theme-dark'), root.classList.add('theme-light');
-}
-
-function toggleTheme(enabled){
-  prefs.theme = enabled ? 'dark' : 'light';
-  savePrefs();
-  applyTheme();
-}
-
-function toggleCompact(enabled){
-  prefs.compact = !!enabled;
-  savePrefs();
-  render();
-}
-
 // Navigation
 function showView(name){
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-  $('view-' + name).classList.remove('hidden');
+  const target = document.getElementById('view-' + name);
+  if(target) target.classList.remove('hidden');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === name));
-}
-
-// About modal
-function showAbout(){
-  $('about-modal').classList.remove('hidden');
-}
-function hideAbout(){
-  $('about-modal').classList.add('hidden');
 }
 
 // Wiring
@@ -228,16 +215,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
   loadDraft();
   render();
 
-  // Bottom nav
+  // Navigation buttons
   document.querySelectorAll('.nav-btn').forEach(b => {
     b.addEventListener('click', ()=> showView(b.dataset.view));
   });
 
-  // FAB
-  $('fab').addEventListener('click', newNote);
+  // New note
+  $('new-note-btn').addEventListener('click', newNote);
   $('create-first').addEventListener('click', newNote);
 
-  // Editor
+  // Editor actions
   $('save-btn').addEventListener('click', saveNote);
   $('cancel-btn').addEventListener('click', ()=> showEditor(false));
   ['note-title','note-body'].forEach(id=>{
@@ -248,8 +235,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
 
   // Settings controls
-  $('theme-toggle').addEventListener('change', e => toggleTheme(e.target.checked));
-  $('compact-toggle').addEventListener('change', e => toggleCompact(e.target.checked));
+  $('compact-toggle').addEventListener('change', e => {
+    prefs.compact = !!e.target.checked;
+    savePrefs();
+    render();
+  });
+
+  // Backup / restore in settings
   $('export-btn').addEventListener('click', exportBackup);
   $('import-btn').addEventListener('click', ()=> {
     const f = $('import-file').files[0];
@@ -257,28 +249,15 @@ document.addEventListener('DOMContentLoaded', ()=>{
     importBackupFile(f);
     $('import-file').value = '';
   });
+
+  // Reset notes
   $('reset-btn').addEventListener('click', ()=> {
     if(confirm('Delete all notes?')){ notes = []; saveNotes(); render(); }
   });
 
-  // Help/About links
-  $('help-about').addEventListener('click', showAbout);
-  $('settings-help').addEventListener('click', ()=> showView('help'));
-  $('settings-about').addEventListener('click', showAbout);
-  $('about-close').addEventListener('click', hideAbout);
+  // Help -> nothing else needed (nav handles it)
 
-  // Initialize settings UI from prefs
-  $('theme-toggle').checked = prefs.theme === 'dark';
-  $('compact-toggle').checked = !!prefs.compact;
-
-  // Ensure backup controls visibility
-  // Backup controls are hidden by default; user can toggle via prefs.showBackup in console or future UI
-  if(prefs.showBackup) $('backup-controls').classList.remove('hidden');
-
-  // Quick long-press brand to clear all notes (feature-phone friendly)
-  const brand = document.querySelector('.brand');
-  let pressTimer = null;
-  brand.addEventListener('touchstart', ()=> { pressTimer = setTimeout(()=>{ if(confirm('Clear all notes?')){ notes=[]; saveNotes(); render(); } }, 800); });
-  brand.addEventListener('touchend', ()=> { if(pressTimer) clearTimeout(pressTimer); });
+  // Default view
+  showView('home');
 });
 
