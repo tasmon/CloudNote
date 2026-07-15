@@ -1,64 +1,93 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>CloudStopwatch</title>
-  <meta name="viewport" content="width=240, height=320, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=240, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>CloudNote</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
-    <h1 id="time">00:00:000</h1>
-  </header>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">CloudNote</div>
+      <button id="new-note-btn" class="btn small">New</button>
+    </header>
 
-  <!-- Stopwatch Page -->
-  <section id="stopwatch" class="page active card">
-    <button onclick="startPause()">5 • Start/Pause</button>
-    <button onclick="reset()">1 • Reset</button>
-    <button onclick="lap()">0 • Lap</button>
-    <div id="laps"></div>
-  </section>
+    <main class="main">
+      <!-- Home -->
+      <section id="view-home" class="view">
+        <div id="empty-state" class="empty hidden">
+          <button id="create-first" class="cta">Create New</button>
+        </div>
+        <ul id="notes" class="notes"></ul>
+      </section>
 
-  <!-- Settings Page -->
-  <section id="settings" class="page card">
-    <h2>* • Settings</h2>
-    <label>Time Format:
-      <select onchange="setFormat(this.value)">
-        <option value="ms">MM:SS:MS</option>
-        <option value="hms">HH:MM:SS:MS</option>
-      </select>
-    </label><br>
-    <label><input type="checkbox" id="sound" onchange="toggleSound()"> Sound</label><br>
-    <label><input type="checkbox" id="autosave" onchange="toggleAutoSave()"> Auto Save</label>
-  </section>
+      <!-- Help -->
+      <section id="view-help" class="view hidden">
+        <div class="card">
+          <h3>Help</h3>
+          <p>CloudNote is a minimal notes app:</p>
+          <ul>
+            <li>Tap New or Create New to add a note.</li>
+            <li>Open a note to edit and Save.</li>
+            <li>Delete removes a note permanently.</li>
+            <li>Backup & Restore are in Settings.</li>
+          </ul>
+        </div>
+      </section>
 
-  <!-- Help Page -->
-  <section id="help" class="page card">
-    <h2>Help</h2>
-    <ul>
-      <li>1 → Reset</li>
-      <li>5 → Start/Pause</li>
-      <li>0 → Lap</li>
-      <li>* → Settings</li>
-    </ul>
-  </section>
+      <!-- Settings -->
+      <section id="view-settings" class="view hidden">
+        <div class="card settings-card">
+          <h3>Settings</h3>
 
-  <!-- About Page -->
-  <section id="about" class="page card">
-    <h2>About</h2>
-    <p>CloudStopwatch<br>
-       Version: 2.0.10<br>
-       Developer: Tasmon</p>
-  </section>
+          <div class="setting-row">
+            <label><input id="compact-toggle" type="checkbox" /> Compact mode</label>
+          </div>
 
-  <!-- Bottom Navigation -->
-  <nav id="bottom-nav">
-    <button onclick="showPage('stopwatch')">Stopwatch</button>
-    <button onclick="showPage('settings')">Settings</button>
-    <button onclick="showPage('help')">Help</button>
-    <button onclick="showPage('about')">About</button>
-  </nav>
+          <div class="setting-row" id="backup-controls">
+            <div class="label">Backup & Restore</div>
+            <button id="export-btn" class="btn small">Export</button>
+            <input id="import-file" type="file" accept="application/json" />
+            <button id="import-btn" class="btn small">Import</button>
+            <div class="hint">Import supports Merge or Replace.</div>
+          </div>
 
-  <script src="script.js"></script>
+          <div class="setting-row">
+            <button id="reset-btn" class="btn secondary small">Delete all notes</button>
+          </div>
+
+          <div class="about-block">
+            <div><strong>App</strong>: CloudNote</div>
+            <div><strong>Version</strong>: 1.0.6</div>
+            <div><strong>Developer</strong>: Tasmon Islam</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Editor -->
+    <div id="editor" class="sheet hidden">
+      <div class="sheet-handle"></div>
+      <div class="sheet-body">
+        <input id="note-title" placeholder="Title" maxlength="80" />
+        <textarea id="note-body" placeholder="Write your note..." rows="6"></textarea>
+        <div class="sheet-actions">
+          <button id="save-btn" class="btn primary small">Save</button>
+          <button id="cancel-btn" class="btn small">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom navigation -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-view="home">Home</button>
+      <button class="nav-btn" data-view="help">Help</button>
+      <button class="nav-btn" data-view="settings">Settings</button>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
+
