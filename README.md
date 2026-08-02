@@ -10,18 +10,6 @@ with built-in backup and restore so you never lose what you've written.
 - Adjustable text size (Normal / Large)
 - Backup notes to text (copy or download as a `.json` file)
 - Restore notes from a previously saved backup
-- Full Left/Center/Right softkey support (Menu / Select / Back)
-- Custom Settings, Help, and About pages
-
-### Controls
-
-| Screen        | Left key (Menu)                          | Center key   | Right key                    |
-| ------------- | ----------------------------------------- | ------------ | ----------------------------- |
-| Notes list    | New Note / Settings / Backup / Help / About | Open note    | Exit app                      |
-| Edit note     | Save / Delete Note / Cancel               | Save         | Back (asks to discard changes)|
-| Settings, Backup, About, Help | -                          | -            | Back                           |
-
-Up/Down arrow keys move between notes on the list screen.
 
 ## Add to CloudPhone
 1. Go to [CloudPhone Developer Page](https://www.cloudfone.com/my).  
