@@ -1,256 +1,347 @@
-// CloudNote v1.0.0 — complete working version
-const STORAGE_KEY = 'cloudnote_v1';
-const DRAFT_KEY = 'cloudnote_draft_v1';
-const PREFS_KEY = 'cloudnote_prefs_v1';
+/* Notes for CloudPhone - shared utilities
+ * Developer: Tasmon Islam
+ */
 
-let notes = [];
-let prefs = { compact: false };
-let editingId = null;
-let autosaveTimer = null;
+var STORAGE_KEY = 'cp_notes_data_v1';
+var SETTINGS_KEY = 'cp_notes_settings_v1';
+var APP_VERSION = '1.0.0';
 
-const $ = id => document.getElementById(id);
+/* ---------- Storage ---------- */
 
-// Utilities
-function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-// Storage
-function loadAll(){
-  try { notes = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e){ notes = []; }
-  try { prefs = JSON.parse(localStorage.getItem(PREFS_KEY)) || prefs; } catch(e){}
-}
-function saveNotes(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
-function savePrefs(){ localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); }
-
-// Render notes
-function render(){
-  const list = $('notes');
-  list.innerHTML = '';
-
-  if(notes.length === 0){
-    $('empty-state').classList.remove('hidden');
-  } else {
-    $('empty-state').classList.add('hidden');
-  }
-
-  const out = notes.slice().sort((a,b)=>b.updated - a.updated);
-  out.forEach(n => {
-    const li = document.createElement('li');
-    li.className = 'note' + (prefs.compact ? ' compact' : '');
-    const title = document.createElement('div');
-    title.className = 'note-title';
-    title.innerHTML = `<span>${escapeHtml(n.title || 'Untitled')}</span><span>${new Date(n.updated).toLocaleTimeString()}</span>`;
-    const body = document.createElement('div');
-    body.className = 'note-body';
-    body.textContent = n.body || '';
-    const actions = document.createElement('div');
-    actions.className = 'note-actions';
-
-    const openBtn = document.createElement('button');
-    openBtn.className = 'btn small';
-    openBtn.textContent = 'Open';
-    openBtn.addEventListener('click', ()=> openEditorFor(n.id));
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'btn small secondary';
-    delBtn.textContent = 'Delete';
-    delBtn.addEventListener('click', ()=> {
-      if(confirm('Delete note?')) deleteNote(n.id);
-    });
-
-    actions.appendChild(openBtn);
-    actions.appendChild(delBtn);
-
-    li.appendChild(title);
-    li.appendChild(body);
-    li.appendChild(actions);
-    list.appendChild(li);
-  });
-}
-
-// Editor functions
-function openEditorFor(id){
-  const n = notes.find(x=>x.id===id);
-  if(!n) return;
-  editingId = id;
-  $('note-title').value = n.title;
-  $('note-body').value = n.body;
-  $('save-btn').textContent = 'Update';
-  showEditor(true);
-}
-
-function newNote(){
-  editingId = null;
-  $('note-title').value = '';
-  $('note-body').value = '';
-  $('save-btn').textContent = 'Save';
-  showEditor(true);
-}
-
-function saveNote(){
-  const title = $('note-title').value.trim();
-  const body = $('note-body').value.trim();
-  const now = Date.now();
-  if(editingId){
-    const n = notes.find(x=>x.id===editingId);
-    if(!n) return;
-    n.title = title;
-    n.body = body;
-    n.updated = now;
-  } else {
-    notes.push({ id: uid(), title, body, created: now, updated: now });
-  }
-  saveNotes();
-  render();
-  showEditor(false);
-}
-
-function deleteNote(id){
-  notes = notes.filter(n=>n.id!==id);
-  saveNotes();
-  render();
-}
-
-function showEditor(show){
-  const s = $('editor');
-  if(show){
-    s.classList.remove('hidden');
-    setTimeout(()=> $('note-title').focus(), 100);
-  } else {
-    s.classList.add('hidden');
-  }
-}
-
-// Draft autosave
-function autosaveDraft(){
-  const draft = { title: $('note-title').value, body: $('note-body').value, editingId };
-  localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-}
-function loadDraft(){
+function loadNotes() {
   try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    if(!raw) return;
-    const d = JSON.parse(raw);
-    if(!d) return;
-    $('note-title').value = d.title || '';
-    $('note-body').value = d.body || '';
-    editingId = d.editingId || null;
-    if(d.title || d.body) showEditor(true);
-  } catch(e){}
+    var raw = localStorage.getItem(STORAGE_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
 }
 
-// Backup / Restore
-function exportBackup(){
-  const payload = { exportedAt: Date.now(), notes };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `cloudnote-backup-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+function saveNotes(notes) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
-function importBackupFile(file){
-  if(!file) return alert('No file selected.');
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const data = JSON.parse(e.target.result);
-      if(!data || !Array.isArray(data.notes)) throw new Error('Invalid backup file.');
-      const merge = confirm('OK = Merge (keep existing, add new). Cancel = Replace (overwrite).');
-      if(merge){
-        const incoming = data.notes.map(normalizeNote);
-        const map = new Map();
-        notes.forEach(n => map.set(n.id, n));
-        incoming.forEach(n => {
-          if(!map.has(n.id)) map.set(n.id, n);
-          else {
-            const existing = map.get(n.id);
-            if(n.updated > existing.updated) map.set(n.id, n);
-          }
-        });
-        notes = Array.from(map.values());
-      } else {
-        notes = data.notes.map(normalizeNote);
-      }
-      saveNotes();
-      render();
-      alert('Restore completed.');
-    } catch(err){
-      alert('Restore failed: ' + err.message);
+function defaultSettings() {
+  return { sort: 'updated_desc', fontSize: 'normal' };
+}
+
+function loadSettings() {
+  try {
+    var raw = localStorage.getItem(SETTINGS_KEY);
+    var parsed = raw ? JSON.parse(raw) : {};
+    var merged = defaultSettings();
+    for (var k in parsed) { if (parsed.hasOwnProperty(k)) merged[k] = parsed[k]; }
+    return merged;
+  } catch (e) {
+    return defaultSettings();
+  }
+}
+
+function saveSettings(settings) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function uid() {
+  return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function nowTs() { return Date.now(); }
+
+function formatDate(ts) {
+  var d = new Date(ts);
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+    ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function getNoteById(id) {
+  var notes = loadNotes();
+  for (var i = 0; i < notes.length; i++) {
+    if (notes[i].id === id) return notes[i];
+  }
+  return null;
+}
+
+function upsertNote(note) {
+  var notes = loadNotes();
+  var found = false;
+  for (var i = 0; i < notes.length; i++) {
+    if (notes[i].id === note.id) { notes[i] = note; found = true; break; }
+  }
+  if (!found) notes.push(note);
+  saveNotes(notes);
+}
+
+function deleteNote(id) {
+  var notes = loadNotes().filter(function (n) { return n.id !== id; });
+  saveNotes(notes);
+}
+
+function sortNotes(notes, sortMode) {
+  var arr = notes.slice();
+  switch (sortMode) {
+    case 'updated_asc':
+      arr.sort(function (a, b) { return a.updatedAt - b.updatedAt; });
+      break;
+    case 'title_asc':
+      arr.sort(function (a, b) {
+        return (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
+      });
+      break;
+    case 'updated_desc':
+    default:
+      arr.sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+      break;
+  }
+  return arr;
+}
+
+/* ---------- Common page setup ---------- */
+
+function applyFontSize() {
+  var s = loadSettings();
+  document.documentElement.setAttribute('data-fontsize', s.fontSize || 'normal');
+}
+
+function setupCommon() {
+  applyFontSize();
+  window.addEventListener('load', function () { window.focus(); });
+  window.addEventListener('pageshow', function () { window.focus(); });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) window.focus();
+  });
+  document.body.addEventListener('click', function () { window.focus(); });
+}
+
+/* ---------- Softkeys ----------
+ * LSK fires as 'Escape' on real CloudPhone hardware (device-tested).
+ * SoftLeft / MenuKey / F1 are kept for emulator compatibility.
+ * RSK fires as 'SoftRight' / 'F2' on hardware. 'Backspace' is kept as an
+ * emulator/browser fallback, but only when the user isn't actively typing,
+ * so it never eats a real backspace while editing a note.
+ */
+
+function bindLeftSoftKey(handler, label) {
+  var el = document.getElementById('softkey-left');
+  if (el) el.textContent = label || 'Menu';
+
+  function onKey(e) {
+    if (e.key === 'Escape' || e.key === 'SoftLeft' || e.key === 'MenuKey' || e.key === 'F1') {
+      e.preventDefault();
+      handler();
     }
-  };
-  reader.readAsText(file);
+  }
+  window.addEventListener('keydown', onKey);
+  if (el) {
+    el.setAttribute('tabindex', '-1');
+    el.addEventListener('click', function (e) { e.preventDefault(); handler(); });
+  }
+  return function () { window.removeEventListener('keydown', onKey); };
 }
 
-function normalizeNote(n){
-  return {
-    id: n.id || uid(),
-    title: n.title || '',
-    body: n.body || '',
-    created: n.created || Date.now(),
-    updated: n.updated || Date.now()
-  };
+function isTypingTarget() {
+  var a = document.activeElement;
+  return !!(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA'));
 }
 
-// Navigation
-function showView(name){
-  document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-  const target = document.getElementById('view-' + name);
-  if(target) target.classList.remove('hidden');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+function bindCenterSoftKey(handler, label) {
+  var el = document.getElementById('softkey-center');
+  if (el) el.textContent = label || 'Select';
+
+  function onKey(e) {
+    if (e.key === 'Enter' && !isTypingTarget()) {
+      e.preventDefault();
+      handler();
+    }
+  }
+  window.addEventListener('keydown', onKey);
+  if (el) {
+    el.setAttribute('tabindex', '-1');
+    el.addEventListener('click', function (e) { e.preventDefault(); handler(); });
+  }
+  return function () { window.removeEventListener('keydown', onKey); };
 }
 
-// Wiring
-document.addEventListener('DOMContentLoaded', ()=>{
-  loadAll();
-  loadDraft();
-  render();
+/* Secondary-page RSK: navigates back via full page load. */
+function bindRightSoftKeyBack(targetUrl, label) {
+  var el = document.getElementById('softkey-right');
+  if (el) el.textContent = label || 'Back';
 
-  // Navigation buttons
-  document.querySelectorAll('.nav-btn').forEach(b => {
-    b.addEventListener('click', ()=> showView(b.dataset.view));
-  });
+  function onKey(e) {
+    if (e.key === 'SoftRight' || e.key === 'F2') {
+      e.preventDefault();
+      window.location.href = targetUrl;
+    } else if (e.key === 'Backspace' && !isTypingTarget()) {
+      e.preventDefault();
+      window.location.href = targetUrl;
+    }
+  }
+  window.addEventListener('keydown', onKey);
+  if (el) {
+    el.setAttribute('tabindex', '-1');
+    el.addEventListener('click', function (e) { e.preventDefault(); window.location.href = targetUrl; });
+  }
+  return function () { window.removeEventListener('keydown', onKey); };
+}
 
-  // New note
-  $('new-note-btn').addEventListener('click', newNote);
-  $('create-first').addEventListener('click', newNote);
+/* Secondary-page RSK with an intercept hook (e.g. "discard changes?" prompt).
+ * onAttempt() should return true to allow navigation, or false to cancel
+ * (in which case onAttempt is responsible for showing its own prompt). */
+function bindRightSoftKeyGuarded(onAttempt, label) {
+  var el = document.getElementById('softkey-right');
+  if (el) el.textContent = label || 'Back';
 
-  // Editor actions
-  $('save-btn').addEventListener('click', saveNote);
-  $('cancel-btn').addEventListener('click', ()=> showEditor(false));
-  ['note-title','note-body'].forEach(id=>{
-    $(id).addEventListener('input', ()=>{
-      if(autosaveTimer) clearTimeout(autosaveTimer);
-      autosaveTimer = setTimeout(autosaveDraft, 700);
+  function attempt(e) {
+    e.preventDefault();
+    onAttempt();
+  }
+
+  function onKey(e) {
+    if (e.key === 'SoftRight' || e.key === 'F2') {
+      attempt(e);
+    } else if (e.key === 'Backspace' && !isTypingTarget()) {
+      attempt(e);
+    }
+  }
+  window.addEventListener('keydown', onKey);
+  if (el) {
+    el.setAttribute('tabindex', '-1');
+    el.addEventListener('click', attempt);
+  }
+  return function () { window.removeEventListener('keydown', onKey); };
+}
+
+/* Home screen: leave RSK completely unintercepted (native close/back applies). */
+function labelHomeRightSoftKey(label) {
+  var el = document.getElementById('softkey-right');
+  if (el) el.textContent = label || 'Exit';
+}
+
+/* ---------- Custom modal (native confirm/alert unavailable) ---------- */
+
+function showModal(message, buttons) {
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+
+  var box = document.createElement('div');
+  box.className = 'modal-box';
+
+  var msg = document.createElement('p');
+  msg.className = 'modal-message';
+  msg.textContent = message;
+  box.appendChild(msg);
+
+  var btnRow = document.createElement('div');
+  btnRow.className = 'modal-buttons';
+
+  var focusIndex = 0;
+  var btnEls = [];
+
+  buttons.forEach(function (b, i) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = b.label;
+    btn.className = 'modal-btn' + (b.primary ? ' primary' : '');
+    btn.addEventListener('click', function () {
+      cleanup();
+      if (b.action) b.action();
     });
+    btnRow.appendChild(btn);
+    btnEls.push(btn);
   });
 
-  // Settings controls
-  $('compact-toggle').addEventListener('change', e => {
-    prefs.compact = !!e.target.checked;
-    savePrefs();
-    render();
+  box.appendChild(btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  if (btnEls[focusIndex]) btnEls[focusIndex].focus();
+
+  function onKey(e) {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusIndex = (focusIndex - 1 + btnEls.length) % btnEls.length;
+      btnEls[focusIndex].focus();
+    } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusIndex = (focusIndex + 1) % btnEls.length;
+      btnEls[focusIndex].focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      btnEls[focusIndex].click();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cleanup();
+    }
+  }
+  window.addEventListener('keydown', onKey, true);
+
+  function cleanup() {
+    window.removeEventListener('keydown', onKey, true);
+    overlay.remove();
+  }
+  return cleanup;
+}
+
+/* ---------- Full-screen options menu (LSK menu) ---------- */
+
+function showOptionsMenu(items) {
+  var menu = document.createElement('menu');
+  menu.className = 'options-menu';
+  var idx = 0;
+  var btns = [];
+
+  items.forEach(function (item, i) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = item.label;
+    b.className = 'menu-item' + (i === 0 ? ' focused' : '');
+    if (item.danger) b.classList.add('danger');
+    b.addEventListener('click', function () {
+      close();
+      if (item.action) item.action();
+    });
+    menu.appendChild(b);
+    btns.push(b);
   });
 
-  // Backup / restore
-  $('export-btn').addEventListener('click', exportBackup);
-  $('import-btn').addEventListener('click', ()=> {
-    const f = $('import-file').files[0];
-    if(!f) return alert('Choose a backup file first.');
-    importBackupFile(f);
-    $('import-file').value = '';
-  });
+  document.body.appendChild(menu);
+  if (btns[0]) btns[0].focus();
 
-  // Reset notes
-  $('reset-btn').addEventListener('click', ()=> {
-    if(confirm('Delete all notes?')){ notes = []; saveNotes(); render(); }
-  });
+  function setIdx(newIdx) {
+    btns[idx].classList.remove('focused');
+    idx = (newIdx + btns.length) % btns.length;
+    btns[idx].classList.add('focused');
+    btns[idx].focus();
+  }
 
-  // Default view
-  showView('home');
-});
+  function onKey(e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIdx(idx + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setIdx(idx - 1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      btns[idx].click();
+    }
+  }
+  window.addEventListener('keydown', onKey, true);
 
+  function close() {
+    window.removeEventListener('keydown', onKey, true);
+    menu.remove();
+  }
+  return close;
+}

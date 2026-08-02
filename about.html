@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=240, height=320, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>About</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>About</header>
+
+  <section id="app">
+    <div class="about-box">
+      <img class="app-icon" src="icon.png" alt="Notes icon">
+      <h2>Notes</h2>
+      <p>Version 1.0.0</p>
+      <p>Developer: Tasmon Islam</p>
+      <p style="margin-top:10pt;">A simple notes app for CloudPhone with backup and restore support.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span id="softkey-left" class="softkey"></span>
+    <span id="softkey-center" class="softkey"></span>
+    <span id="softkey-right" class="softkey"></span>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    setupCommon();
+    bindRightSoftKeyBack('index.html', 'Back');
+    document.getElementById('softkey-left').textContent = '';
+    document.getElementById('softkey-center').textContent = '';
+  </script>
+</body>
+</html>

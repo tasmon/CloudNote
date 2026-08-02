@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=240, height=320, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Backup &amp; Restore</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>Backup &amp; Restore</header>
+
+  <section id="app">
+    <div class="section-title">Backup</div>
+    <p class="hint">Copy this text somewhere safe, or try Download to save it as a file.</p>
+    <textarea id="backup-output" class="backup-textarea" readonly></textarea>
+    <button type="button" class="action-btn" id="copy-btn">Copy Text</button>
+    <a id="download-link" class="action-btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;" href="#" download="notes-backup.json">Download Backup File</a>
+
+    <div class="section-title">Restore</div>
+    <p class="hint">Paste backup text below, then press Restore. This replaces all current notes.</p>
+    <textarea id="restore-input" class="backup-textarea" placeholder="Paste backup text here"></textarea>
+    <button type="button" class="action-btn" id="restore-btn">Restore From Text</button>
+  </section>
+
+  <footer>
+    <span id="softkey-left" class="softkey"></span>
+    <span id="softkey-center" class="softkey"></span>
+    <span id="softkey-right" class="softkey"></span>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    setupCommon();
+
+    var outputEl = document.getElementById('backup-output');
+    var downloadLink = document.getElementById('download-link');
+    var restoreInput = document.getElementById('restore-input');
+
+    function buildBackupPayload() {
+      return JSON.stringify({
+        app: 'CloudPhone Notes',
+        version: APP_VERSION,
+        exportedAt: nowTs(),
+        notes: loadNotes()
+      }, null, 0);
+    }
+
+    function refreshBackupText() {
+      var json = buildBackupPayload();
+      outputEl.value = json;
+      try {
+        var blob = new Blob([json], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        downloadLink.href = url;
+      } catch (e) {
+        downloadLink.style.display = 'none';
+      }
+    }
+
+    document.getElementById('copy-btn').addEventListener('click', function () {
+      outputEl.focus();
+      outputEl.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      showModal(ok ? 'Backup text copied.' : 'Could not auto-copy. Text is selected, please copy manually.', [
+        { label: 'OK', primary: true }
+      ]);
+    });
+
+    document.getElementById('restore-btn').addEventListener('click', function () {
+      var raw = restoreInput.value.trim();
+      if (!raw) {
+        showModal('Please paste backup text first.', [{ label: 'OK', primary: true }]);
+        return;
+      }
+      var parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        showModal('That text is not valid backup data.', [{ label: 'OK', primary: true }]);
+        return;
+      }
+      var notes = Array.isArray(parsed) ? parsed : parsed.notes;
+      if (!Array.isArray(notes)) {
+        showModal('That text is not valid backup data.', [{ label: 'OK', primary: true }]);
+        return;
+      }
+      showModal('Replace all current notes with this backup?', [
+        { label: 'Cancel' },
+        {
+          label: 'Restore', primary: true, action: function () {
+            var cleaned = notes.filter(function (n) { return n && typeof n === 'object'; }).map(function (n) {
+              return {
+                id: n.id || uid(),
+                title: typeof n.title === 'string' ? n.title : '',
+                body: typeof n.body === 'string' ? n.body : '',
+                createdAt: n.createdAt || nowTs(),
+                updatedAt: n.updatedAt || nowTs()
+              };
+            });
+            saveNotes(cleaned);
+            refreshBackupText();
+            showModal('Restore complete. ' + cleaned.length + ' note(s) loaded.', [
+              { label: 'OK', primary: true }
+            ]);
+          }
+        }
+      ]);
+    });
+
+    bindRightSoftKeyBack('index.html', 'Back');
+    document.getElementById('softkey-left').textContent = '';
+    document.getElementById('softkey-center').textContent = '';
+
+    refreshBackupText();
+  </script>
+</body>
+</html>

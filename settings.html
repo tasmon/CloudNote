@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=240, height=320, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Settings</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>Settings</header>
+
+  <section id="app">
+    <div class="setting-row">
+      <label for="sort-select">Sort notes by</label>
+      <select id="sort-select">
+        <option value="updated_desc">Newest updated first</option>
+        <option value="updated_asc">Oldest updated first</option>
+        <option value="title_asc">Title (A-Z)</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label for="fontsize-select">Text size</label>
+      <select id="fontsize-select">
+        <option value="normal">Normal</option>
+        <option value="large">Large</option>
+      </select>
+    </div>
+
+    <button type="button" class="danger-btn" id="clear-all-btn">Delete All Notes</button>
+  </section>
+
+  <footer>
+    <span id="softkey-left" class="softkey"></span>
+    <span id="softkey-center" class="softkey"></span>
+    <span id="softkey-right" class="softkey"></span>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    setupCommon();
+
+    var settings = loadSettings();
+    var sortSelect = document.getElementById('sort-select');
+    var fontSelect = document.getElementById('fontsize-select');
+
+    sortSelect.value = settings.sort;
+    fontSelect.value = settings.fontSize;
+
+    sortSelect.addEventListener('change', function () {
+      settings.sort = sortSelect.value;
+      saveSettings(settings);
+    });
+
+    fontSelect.addEventListener('change', function () {
+      settings.fontSize = fontSelect.value;
+      saveSettings(settings);
+      applyFontSize();
+    });
+
+    document.getElementById('clear-all-btn').addEventListener('click', function () {
+      showModal('Delete all notes? This cannot be undone.', [
+        { label: 'Cancel' },
+        {
+          label: 'Delete All', primary: true, action: function () {
+            saveNotes([]);
+            showModal('All notes deleted.', [
+              { label: 'OK', primary: true }
+            ]);
+          }
+        }
+      ]);
+    });
+
+    bindRightSoftKeyBack('index.html', 'Back');
+    document.getElementById('softkey-left').textContent = '';
+    document.getElementById('softkey-center').textContent = '';
+  </script>
+</body>
+</html>

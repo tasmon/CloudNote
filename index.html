@@ -1,93 +1,122 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=240, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>CloudNote</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=240, height=320, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Notes</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-    <header class="topbar">
-      <div class="brand">CloudNote</div>
-      <button id="new-note-btn" class="btn small">New</button>
-    </header>
+  <header>Notes</header>
 
-    <main class="main">
-      <!-- Home -->
-      <section id="view-home" class="view">
-        <div id="empty-state" class="empty hidden">
-          <button id="create-first" class="cta">Create New</button>
-        </div>
-        <ul id="notes" class="notes"></ul>
-      </section>
+  <section id="app">
+    <ul class="note-list" id="note-list"></ul>
+    <p class="empty-state" id="empty-state" hidden>No notes yet.<br>Press Menu &gt; New Note to add one.</p>
+  </section>
 
-      <!-- Help -->
-      <section id="view-help" class="view hidden">
-        <div class="card">
-          <h3>Help</h3>
-          <p>CloudNote is a minimal notes app:</p>
-          <ul>
-            <li>Tap New or Create New to add a note.</li>
-            <li>Open a note to edit and Save.</li>
-            <li>Delete removes a note permanently.</li>
-            <li>Backup & Restore are in Settings.</li>
-          </ul>
-        </div>
-      </section>
-
-      <!-- Settings -->
-      <section id="view-settings" class="view hidden">
-        <div class="card settings-card">
-          <h3>Settings</h3>
-
-          <div class="setting-row">
-            <label><input id="compact-toggle" type="checkbox" /> Compact mode</label>
-          </div>
-
-          <div class="setting-row" id="backup-controls">
-            <div class="label">Backup & Restore</div>
-            <button id="export-btn" class="btn small">Export</button>
-            <input id="import-file" type="file" accept="application/json" />
-            <button id="import-btn" class="btn small">Import</button>
-            <div class="hint">Import supports Merge or Replace.</div>
-          </div>
-
-          <div class="setting-row">
-            <button id="reset-btn" class="btn secondary small">Delete all notes</button>
-          </div>
-
-          <div class="about-block">
-            <div><strong>App</strong>: CloudNote</div>
-            <div><strong>Version</strong>: 1.0.6</div>
-            <div><strong>Developer</strong>: Tasmon Islam</div>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <!-- Editor -->
-    <div id="editor" class="sheet hidden">
-      <div class="sheet-handle"></div>
-      <div class="sheet-body">
-        <input id="note-title" placeholder="Title" maxlength="80" />
-        <textarea id="note-body" placeholder="Write your note..." rows="6"></textarea>
-        <div class="sheet-actions">
-          <button id="save-btn" class="btn primary small">Save</button>
-          <button id="cancel-btn" class="btn small">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bottom navigation -->
-    <nav class="bottom-nav">
-      <button class="nav-btn active" data-view="home">Home</button>
-      <button class="nav-btn" data-view="help">Help</button>
-      <button class="nav-btn" data-view="settings">Settings</button>
-    </nav>
-  </div>
+  <footer>
+    <span id="softkey-left" class="softkey"></span>
+    <span id="softkey-center" class="softkey"></span>
+    <span id="softkey-right" class="softkey"></span>
+  </footer>
 
   <script src="app.js"></script>
+  <script>
+    setupCommon();
+    labelHomeRightSoftKey('Exit');
+
+    var listEl = document.getElementById('note-list');
+    var emptyEl = document.getElementById('empty-state');
+    var items = [];
+    var selectedIndex = 0;
+
+    function openNote(id) {
+      window.location.href = 'note.html?id=' + encodeURIComponent(id);
+    }
+
+    function render() {
+      var settings = loadSettings();
+      var notes = sortNotes(loadNotes(), settings.sort);
+      listEl.innerHTML = '';
+      items = [];
+
+      if (notes.length === 0) {
+        emptyEl.hidden = false;
+        return;
+      }
+      emptyEl.hidden = true;
+
+      notes.forEach(function (note, i) {
+        var li = document.createElement('li');
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'note-item';
+        btn.setAttribute('data-id', note.id);
+
+        var title = document.createElement('span');
+        title.className = 'note-title';
+        title.textContent = note.title && note.title.trim() ? note.title : '(Untitled note)';
+
+        var snippet = document.createElement('span');
+        snippet.className = 'note-snippet';
+        snippet.textContent = (note.body || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+
+        var date = document.createElement('span');
+        date.className = 'note-date';
+        date.textContent = formatDate(note.updatedAt);
+
+        btn.appendChild(title);
+        btn.appendChild(snippet);
+        btn.appendChild(date);
+        btn.addEventListener('click', function () { openNote(note.id); });
+
+        li.appendChild(btn);
+        listEl.appendChild(li);
+        items.push(btn);
+      });
+
+      selectedIndex = Math.min(selectedIndex, items.length - 1);
+      focusSelected();
+    }
+
+    function focusSelected() {
+      items.forEach(function (el, i) {
+        el.classList.toggle('focused', i === selectedIndex);
+      });
+      if (items[selectedIndex]) items[selectedIndex].focus();
+    }
+
+    window.addEventListener('keydown', function (e) {
+      if (items.length === 0) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % items.length;
+        focusSelected();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+        focusSelected();
+      }
+    });
+
+    function openMenu() {
+      showOptionsMenu([
+        { label: 'New Note', action: function () { window.location.href = 'note.html'; } },
+        { label: 'Settings', action: function () { window.location.href = 'settings.html'; } },
+        { label: 'Backup & Restore', action: function () { window.location.href = 'backup.html'; } },
+        { label: 'Help', action: function () { window.location.href = 'help.html'; } },
+        { label: 'About', action: function () { window.location.href = 'about.html'; } }
+      ]);
+    }
+
+    bindLeftSoftKey(openMenu, 'Menu');
+    document.getElementById('softkey-center').textContent = 'Open';
+    document.getElementById('softkey-center').addEventListener('click', function () {
+      if (items[selectedIndex]) items[selectedIndex].click();
+    });
+
+    render();
+  </script>
 </body>
 </html>
-
