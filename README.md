@@ -23,8 +23,6 @@ with built-in backup and restore so you never lose what you've written.
 
 Up/Down arrow keys move between notes on the list screen.
 
-```
-
 ## Add to CloudPhone
 1. Go to [CloudPhone Developer Page](https://www.cloudfone.com/my).  
 2. Select **Add Widget**.  
