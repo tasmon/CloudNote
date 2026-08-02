@@ -12,15 +12,14 @@
 
   <section id="app">
     <div class="section-title">Backup</div>
-    <p class="hint">Copy this text somewhere safe, or try Download to save it as a file.</p>
-    <textarea id="backup-output" class="backup-textarea" readonly></textarea>
-    <button type="button" class="action-btn" id="copy-btn">Copy Text</button>
-    <a id="download-link" class="action-btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;" href="#" download="notes-backup.json">Download Backup File</a>
+    <p class="hint">Save all your notes to a backup file.</p>
+    <button type="button" class="action-btn" id="backup-btn">Save Backup File</button>
 
     <div class="section-title">Restore</div>
-    <p class="hint">Paste backup text below, then press Restore. This replaces all current notes.</p>
-    <textarea id="restore-input" class="backup-textarea" placeholder="Paste backup text here"></textarea>
-    <button type="button" class="action-btn" id="restore-btn">Restore From Text</button>
+    <p class="hint">Choose a previously saved backup file to restore your notes. This replaces all current notes.</p>
+    <button type="button" class="action-btn" id="restore-btn">Choose Backup File</button>
+    <input type="file" id="restore-file" accept="application/json,.json" style="display:none;">
+    <p class="hint" id="restore-status"></p>
   </section>
 
   <footer>
@@ -33,9 +32,10 @@
   <script>
     setupCommon();
 
-    var outputEl = document.getElementById('backup-output');
-    var downloadLink = document.getElementById('download-link');
-    var restoreInput = document.getElementById('restore-input');
+    var backupBtn = document.getElementById('backup-btn');
+    var restoreBtn = document.getElementById('restore-btn');
+    var fileInput = document.getElementById('restore-file');
+    var statusEl = document.getElementById('restore-status');
 
     function buildBackupPayload() {
       return JSON.stringify({
@@ -43,77 +43,102 @@
         version: APP_VERSION,
         exportedAt: nowTs(),
         notes: loadNotes()
-      }, null, 0);
+      });
     }
 
-    function refreshBackupText() {
+    function cleanNotes(notes) {
+      return notes.filter(function (n) { return n && typeof n === 'object'; }).map(function (n) {
+        return {
+          id: n.id || uid(),
+          title: typeof n.title === 'string' ? n.title : '',
+          body: typeof n.body === 'string' ? n.body : '',
+          createdAt: n.createdAt || nowTs(),
+          updatedAt: n.updatedAt || nowTs()
+        };
+      });
+    }
+
+    /* ---------- Backup: save to file ---------- */
+    backupBtn.addEventListener('click', function () {
       var json = buildBackupPayload();
-      outputEl.value = json;
       try {
         var blob = new Blob([json], { type: 'application/json' });
         var url = URL.createObjectURL(blob);
-        downloadLink.href = url;
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'notes-backup.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+        showModal('Backup file saved.', [{ label: 'OK', primary: true }]);
       } catch (e) {
-        downloadLink.style.display = 'none';
+        showModal('Could not save the backup file on this device.', [{ label: 'OK', primary: true }]);
       }
-    }
-
-    document.getElementById('copy-btn').addEventListener('click', function () {
-      outputEl.focus();
-      outputEl.select();
-      var ok = false;
-      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
-      showModal(ok ? 'Backup text copied.' : 'Could not auto-copy. Text is selected, please copy manually.', [
-        { label: 'OK', primary: true }
-      ]);
     });
 
-    document.getElementById('restore-btn').addEventListener('click', function () {
-      var raw = restoreInput.value.trim();
-      if (!raw) {
-        showModal('Please paste backup text first.', [{ label: 'OK', primary: true }]);
-        return;
-      }
-      var parsed;
-      try {
-        parsed = JSON.parse(raw);
-      } catch (e) {
-        showModal('That text is not valid backup data.', [{ label: 'OK', primary: true }]);
-        return;
-      }
-      var notes = Array.isArray(parsed) ? parsed : parsed.notes;
-      if (!Array.isArray(notes)) {
-        showModal('That text is not valid backup data.', [{ label: 'OK', primary: true }]);
-        return;
-      }
-      showModal('Replace all current notes with this backup?', [
-        { label: 'Cancel' },
-        {
-          label: 'Restore', primary: true, action: function () {
-            var cleaned = notes.filter(function (n) { return n && typeof n === 'object'; }).map(function (n) {
-              return {
-                id: n.id || uid(),
-                title: typeof n.title === 'string' ? n.title : '',
-                body: typeof n.body === 'string' ? n.body : '',
-                createdAt: n.createdAt || nowTs(),
-                updatedAt: n.updatedAt || nowTs()
-              };
-            });
-            saveNotes(cleaned);
-            refreshBackupText();
-            showModal('Restore complete. ' + cleaned.length + ' note(s) loaded.', [
-              { label: 'OK', primary: true }
-            ]);
-          }
+    /* ---------- Restore: load from file ---------- */
+    restoreBtn.addEventListener('click', function () {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0];
+      fileInput.value = '';
+      if (!file) return;
+
+      statusEl.textContent = 'Selected: ' + file.name;
+
+      var reader = new FileReader();
+      reader.onerror = function () {
+        showModal('Could not read that file.', [{ label: 'OK', primary: true }]);
+      };
+      reader.onload = function () {
+        var parsed;
+        try {
+          parsed = JSON.parse(String(reader.result));
+        } catch (err) {
+          showModal('That file is not valid backup data.', [{ label: 'OK', primary: true }]);
+          return;
         }
-      ]);
+        var notes = Array.isArray(parsed) ? parsed : parsed.notes;
+        if (!Array.isArray(notes)) {
+          showModal('That file is not valid backup data.', [{ label: 'OK', primary: true }]);
+          return;
+        }
+        showModal('Replace all current notes with "' + file.name + '"?', [
+          { label: 'Cancel' },
+          {
+            label: 'Restore', primary: true, action: function () {
+              var cleaned = cleanNotes(notes);
+              saveNotes(cleaned);
+              statusEl.textContent = 'Restored ' + cleaned.length + ' note(s) from ' + file.name;
+              showModal('Restore complete. ' + cleaned.length + ' note(s) loaded.', [
+                { label: 'OK', primary: true }
+              ]);
+            }
+          }
+        ]);
+      };
+      reader.readAsText(file);
     });
+
+    /* Up/Down d-pad navigation between the two action buttons */
+    var focusables = [backupBtn, restoreBtn];
+    var focusIdx = 0;
+    function setFocus(i) {
+      focusIdx = (i + focusables.length) % focusables.length;
+      focusables[focusIdx].focus();
+    }
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setFocus(focusIdx + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setFocus(focusIdx - 1); }
+    });
+    setFocus(0);
 
     bindRightSoftKeyBack('index.html', 'Back');
     document.getElementById('softkey-left').textContent = '';
     document.getElementById('softkey-center').textContent = '';
-
-    refreshBackupText();
   </script>
 </body>
 </html>
